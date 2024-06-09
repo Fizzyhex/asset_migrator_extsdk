@@ -1,4 +1,18 @@
-# Asset Migrator (For Unity modding)
+# Asset Migrator (Extended SDK)
+
+This is a modified version of the asset migrator that takes in a package name as the 2nd argument. The syntax is as follows:
+
+```sh
+./prefab_converter.exe [src assets path] [package name] [dst assets path]
+```
+
+Here's an example of the tool being used to migrate assets from one Unity project to another, feeding the package name of the [Marrow Extended SDK](https://github.com/notnotnotswipez/Marrow-ExtendedSDK-MAINTAINED) into the `[package name]` argument:
+
+```
+./prefab_converter.exe "C:\Bonelab\Patch3\Avatars\AvatarProject\Assets" "com.stresslevelzero.marrow.sdk.extended" "E:\Documents\Bonelab\Patch4\Avatar Project\Avatar Project\Assets" "C\UnityProject\Assets\Prefabs\MyAvatar.prefab" "C\UnityProject\Assets\Prefabs\MyAvatar (1.5x) Variant.prefab"
+```
+
+## Asset Migrator (For Unity modding)
 
 Ever had files from one Unity project you wanted to migrate to another?
 
