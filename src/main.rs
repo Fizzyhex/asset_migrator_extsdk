@@ -56,7 +56,7 @@ impl PartialEq<AssetConversion> for AssetConversion {
 
 fn print_help() {
     println!("Proper usage of prefab_converter.exe is as follows\n");
-    println!("./prefab_converter.exe [src assets path] [package name] [dst assets path]");
+    println!("./prefab_converter.exe [src assets path] [dst assets path]");
     println!("\n... = Any number of valid prefab paths (in the source assets path)!");
     println!("\nExample:");
     println!("\n./prefab_converter.exe \"C:/CustomItemsSDK/Assets\" \"C:/MarrowSDK/Assets\"");
@@ -68,14 +68,14 @@ fn main() {
     // Handle arguments
     let args: Vec<String> = env::args().collect();
 
-    let (src_assets, package_name, dst_assets) = if args.len() > 1 {
+    let (src_assets, dst_assets) = if args.len() > 1 {
         // Minimum is 4
         if args.len() < 3 {
             print_help();
             return;
         }
 
-        (args[1].clone(), args[2].clone(), args[3].clone())
+        (args[1].clone(), args[2].clone())
     } else {
         print_help();
         return;
@@ -149,47 +149,29 @@ fn main() {
         println!("Collecting destination meta files...");
         let mut dst_metas = collect_meta_files(&dst_assets);
 
-        if package_name != "" {
-            // The source package will be a folder up from the dst assets, in 'Library/PackageCache'
-            println!("Collecting source meta files from packages...");
+        // The source package will be a folder up from the dst assets, in 'Library/PackageCache'
+        println!("Collecting meta files from package cache...");
 
-            let src_package_cache = {
-                let mut package_cache = PathBuf::from(&dst_assets);
-                package_cache.pop();
-                package_cache.push("Library");
-                package_cache.push("PackageCache");
-        
-                package_cache
-            };
-        
-            let src_package = {
-                let mut package = PathBuf::from(&src_package_cache);
-        
-                for entry in read_dir(&src_package_cache).unwrap() {
-                    let entry = entry.unwrap();
-                    let path = entry.path();
-        
-                    if path.is_dir() {
-                        let path_str = path.to_str().unwrap();
-        
-                        if path_str.contains(&package_name) {
-                            package = path;
-                            break;
-                        }
-                    }
-                }
-        
-                package
-            };
-        
-            let src_package_str = src_package.as_path().to_str().unwrap();
-            println!("Source package path: {src_package_str}");
-            
-            // combine dst_metas with the ones from src_package_str
-            let mut package_metas = collect_meta_files(&src_package_str.to_owned());
-            dst_metas.append(&mut package_metas);
-            
-        }
+        let src_package_cache = {
+            let mut package_cache = PathBuf::from(&dst_assets);
+            package_cache.pop();
+            package_cache.push("Library");
+            package_cache.push("PackageCache");
+    
+            package_cache
+        };
+    
+        let src_package_str = src_package_cache.as_path().to_str().unwrap();
+        println!("Package cache path: {src_package_str}");
+
+        let mut package_metas = collect_meta_files(&src_package_str.to_owned());
+
+        // Remove duplicate meta files that have the same name in dst_metas from package_metas
+        package_metas.retain(|package_meta| {
+            !dst_metas.iter().any(|dst_meta| dst_meta.base_name == package_meta.base_name)
+        });
+
+        dst_metas.append(&mut package_metas);
 
         //let drop = Dropwatch::new_begin("OVERLAPPING");
 
