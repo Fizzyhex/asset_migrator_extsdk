@@ -19,3 +19,4 @@ inherits = "release"
 debug = true
 
 [dependencies]
+walkdir = "2"

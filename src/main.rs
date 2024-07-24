@@ -39,8 +39,12 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::thread::sleep;
 use std::time::Duration;
+use std::fs::File;
+use std::io::Write;
 
 use crate::meta_file::*;
+
+use walkdir::WalkDir;
 
 #[derive(Default, Debug)]
 struct AssetConversion {
@@ -64,6 +68,7 @@ fn print_help() {
 
 fn main() {
     sleep(Duration::from_millis(10000u64));
+    let mut log_file = File::create("log.txt").unwrap();
 
     // Handle arguments
     let args: Vec<String> = env::args().collect();
@@ -163,6 +168,7 @@ fn main() {
     
         let src_package_str = src_package_cache.as_path().to_str().unwrap();
         println!("Package cache path: {src_package_str}");
+        writeln!(log_file, "Package cache path: {src_package_str}").unwrap();
 
         let mut package_metas = collect_meta_files(&src_package_str.to_owned());
 
@@ -173,7 +179,8 @@ fn main() {
 
         dst_metas.append(&mut package_metas);
 
-        //let drop = Dropwatch::new_begin("OVERLAPPING");
+        writeln!(log_file, "Destination meta files ({})", dst_metas.len()).unwrap();
+        dst_metas.iter().for_each(|meta| writeln!(log_file, "- {0}", meta.base_name).unwrap());
 
         println!("Determining missing meta files...");
         for src_meta in &src_metas {
@@ -210,7 +217,35 @@ fn main() {
 
     let mut convert_queue = Vec::<AssetConversion>::new();
 
+    let mut prefabs: Vec<String> = Vec::new();
+
     for prefab in args.iter().skip(3) {
+        // if it's a folder, we need to recurse
+
+        if Path::new(prefab).is_dir() {
+            // get all files in the directory recursively
+            let walker = WalkDir::new(prefab).into_iter();
+
+            for entry in walker.filter_map(|e| e.ok()) {
+                if entry.path().is_dir() {
+                    continue;
+                }
+
+                let path = entry.path();
+                let ext = path.extension().unwrap().to_str().unwrap();
+
+                if convert_extensions.iter().any(|e| e == ext) {
+                    let path_str = path.display().to_string();
+                    prefabs.push(path_str);
+                    log_file.write_all(path.display().to_string().as_bytes()).unwrap();
+                }
+            }
+        } else {
+            prefabs.push(prefab.to_string());
+        }
+    }
+
+    for prefab in &prefabs {
         let prefab_dir = PathBuf::from(prefab);
         let mut relative_export_path = PathBuf::from(&export_path);
 
@@ -266,8 +301,6 @@ fn main() {
                 continue;
             }
 
-            // Check if this is in our list of missing ones
-            // If so copy it
             let mut need_delete = false;
             let mut delete = 0usize;
 
