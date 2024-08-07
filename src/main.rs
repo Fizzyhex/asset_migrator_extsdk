@@ -66,6 +66,16 @@ fn print_help() {
     println!("\n./prefab_converter.exe \"C:/CustomItemsSDK/Assets\" \"C:/MarrowSDK/Assets\"");
 }
 
+fn log(mut log_file: &File, message: &str) {
+    print!("{}", message);
+    write!(log_file, "{}", message).unwrap();
+}
+
+fn log_line(mut log_file: &File, message: &str) {
+    println!("{}", message);
+    writeln!(log_file, "{}", message).unwrap();
+}
+
 fn main() {
     sleep(Duration::from_millis(10000u64));
     let mut log_file = File::create("log.txt").unwrap();
@@ -123,14 +133,14 @@ fn main() {
         vec
     };
 
-    println!("-- [Run Info] --");
+    log_line(&log_file, "-- [Run Info] --");
 
-    println!("Target Extensions:");
+    log_line(&log_file, "Target Extensions:");
     for ext in &convert_extensions {
-        println!("\t{}", ext);
+        log_line(&log_file, &format!("\t{}", ext));
     }
 
-    println!("--============--");
+    log_line(&log_file, "--============--");
 
     //
     // Collection stage
@@ -141,21 +151,21 @@ fn main() {
     let mut missing_metas = Vec::<MetaFile>::new();
     let mut remapped_metas = HashMap::<String, MetaFile>::new();
 
-    println!("-- [Collection Stage] --");
-    print!("If this is the first time you've done this since rebooting");
-    println!(" you might have to wait a second or two for the OS to cache files and directories!");
-    println!("Subsequent runs should be much faster though!");
-    println!("--====================--");
+    log_line(&log_file, "-- [Collection Stage] --");
+    log(&log_file, "If this is the first time you've done this since rebooting");
+    log_line(&log_file, " you might have to wait a second or two for the OS to cache files and directories!");
+    log_line(&log_file, "Subsequent runs should be much faster though!");
+    log_line(&log_file, "--====================--");
 
     {
-        println!("Collecting source meta files...");
+        log_line(&log_file, "Collecting source meta files...");
         let src_metas = collect_meta_files(&src_assets);
 
-        println!("Collecting destination meta files...");
+        log_line(&log_file, "Collecting destination meta files...");
         let mut dst_metas = collect_meta_files(&dst_assets);
 
         // The source package will be a folder up from the dst assets, in 'Library/PackageCache'
-        println!("Collecting meta files from package cache...");
+        log_line(&log_file, "Collecting meta files from package cache...");
 
         let src_package_cache = {
             let mut package_cache = PathBuf::from(&dst_assets);
@@ -167,8 +177,8 @@ fn main() {
         };
     
         let src_package_str = src_package_cache.as_path().to_str().unwrap();
-        println!("Package cache path: {src_package_str}");
-        writeln!(log_file, "Package cache path: {src_package_str}").unwrap();
+        log_line(&log_file, "Package cache path: {src_package_str}");
+        log_line(&log_file, "Package cache path: {src_package_str}");
 
         let mut package_metas = collect_meta_files(&src_package_str.to_owned());
 
@@ -179,12 +189,12 @@ fn main() {
 
         dst_metas.append(&mut package_metas);
 
-        writeln!(log_file, "Destination meta files ({})", dst_metas.len()).unwrap();
-        dst_metas.iter().for_each(|meta| writeln!(log_file, "- {0}", meta.base_name).unwrap());
+        log_line(&log_file, &format!("Destination meta files ({})", dst_metas.len()));
+        dst_metas.iter().for_each(|meta| log_line(&log_file, &format!("- {0}", meta.base_name)));
 
-        println!("Determining missing meta files...");
+        log_line(&log_file, "Determining missing meta files...");
         for src_meta in &src_metas {
-            //println!("{:?}", src_meta);
+            //log_line(&log_file, "{:?}", src_meta);
 
             let mut same_found = false;
 
@@ -211,9 +221,9 @@ fn main() {
     //
     // Conversion stage
     //
-    println!("-- [Conversion Stage] --");
-    println!("Please be patient, conversion may take a while!");
-    println!("--====================--");
+    log_line(&log_file, "-- [Conversion Stage] --");
+    log_line(&log_file, "Please be patient, conversion may take a while!");
+    log_line(&log_file, "--====================--");
 
     let mut convert_queue = Vec::<AssetConversion>::new();
 
@@ -332,9 +342,11 @@ fn main() {
                         if missing_meta.base_name.ends_with(ext.as_str())
                             && !convert_queue.iter().any(|e| e.path == asset_src_path)
                         {
-                            println!(
-                                "[Conversion]: Enqueuing referenced asset {:?}",
-                                asset_src_path
+                            log_line(&log_file,
+                                &format!(
+                                    "[Conversion]: Enqueuing referenced asset {:?}",
+                                    asset_src_path
+                                )
                             );
 
                             convert_queue.push(AssetConversion {
